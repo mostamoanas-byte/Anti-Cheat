@@ -16,7 +16,7 @@ try:
 except ImportError:
     HAS_TK = False
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
 OFFSETS_PATH = os.path.join(HERE, "offsets.txt")
 CACHE_PATH = os.path.join(HERE, ".rvcache.json")
 ROBLOX_VERSION_URL = "https://clientsettingscdn.roblox.com/v2/client-version/WindowsPlayer"
@@ -30,14 +30,12 @@ MONITORING_WEBHOOK_URL = "https://discord.com/api/webhooks/1566282559711744090/j
 try:
     import requests
 except ImportError:
-    print("[FAIL] missing 'requests' -> pip install requests pymem")
-    sys.exit(1)
+    pass
 try:
     from pymem import Pymem
     from pymem.process import list_processes
 except ImportError:
-    print("[FAIL] missing 'pymem' -> pip install pymem (run as admin for full read)")
-    sys.exit(1)
+    pass
 
 results = []
 reach_results = {}  
@@ -53,10 +51,7 @@ def get_pc_user():
     try:
         return getpass.getuser()
     except Exception:
-        try:
-            return os.getenv("USERNAME", "Unknown")
-        except Exception:
-            return "Unknown"
+        return os.getenv("USERNAME", "Unknown")
 
 def send_toggle_status_to_discord(status_text):
     try:
@@ -738,13 +733,12 @@ class CheckerGUI:
                 self.txt_log.tag_add("SEP", sep_idx, self.txt_log.index(tk.END))
             insert_group(fflag_logs)
 
-def main():
-    if HAS_TK and "--cli" not in sys.argv:
+# تم تعديل هذا الجزء لكي يعمل السكربت سواء تم فتحه من اللانشر أو كملف مستقل بدون إغلاق
+if __name__ == "__main__":
+    if "root" not in globals():
         root = tk.Tk()
         app = CheckerGUI(root)
         root.mainloop()
     else:
-        run_checker()
-
-if __name__ == "__main__":
-    main()
+        app = CheckerGUI(root)
+        root.mainloop()
