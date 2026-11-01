@@ -696,7 +696,7 @@ class CheckerGUI:
             
         for item in self.tree_reach.get_children():
             self.tree_reach.delete(item)
-        for part, data in reach_items if 'reach_items' in locals() else reach_results.items():
+        for part, data in reach_results.items():
             tag = "bad" if data["status"] == "FAIL" else "clean"
             self.tree_reach.insert("", tk.END, values=(data["name"], data["normal"], data["current"], data["status"]), tags=(tag,))
 
@@ -739,10 +739,12 @@ class CheckerGUI:
             insert_group(fflag_logs)
 
 def main():
-    # فتح واجهة الـ GUI بشكل إجباري ومستقل دائماً عند التشغيل
-    root = tk.Tk()
-    app = CheckerGUI(root)
-    root.mainloop()
+    if HAS_TK and "--cli" not in sys.argv:
+        root = tk.Tk()
+        app = CheckerGUI(root)
+        root.mainloop()
+    else:
+        run_checker()
 
 if __name__ == "__main__":
     main()
