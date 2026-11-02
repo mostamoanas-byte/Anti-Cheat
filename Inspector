@@ -733,7 +733,6 @@ class CheckerGUI:
                 self.txt_log.tag_add("SEP", sep_idx, self.txt_log.index(tk.END))
             insert_group(fflag_logs)
 
-# تم تعديل هذا الجزء لكي يعمل السكربت سواء تم فتحه من اللانشر أو كملف مستقل بدون إغلاق
 if __name__ == "__main__":
     if "root" not in globals():
         root = tk.Tk()
